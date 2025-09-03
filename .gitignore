@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.parcel-cache/
+config.json
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.log
+debug.txt

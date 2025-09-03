@@ -1,0 +1,39 @@
+{
+  "name": "tubemood",
+  "version": "0.1.0",
+  "description": "Sentiment analysis of YouTube comments",
+  "author": "Sameer Dash",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "chart.js": "^4.5.0",
+    "express": "^4.21.2",
+    "googleapis": "^148.0.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.25.7",
+    "@parcel/packager-xml": "2.12.0",
+    "@parcel/transformer-xml": "2.12.0",
+    "eslint": "^8.38.0",
+    "parcel": "2.12.0"
+  },
+  "targets": {
+    "default": {
+      "distDir": "dist",
+      "sourceMap": false,
+      "engines": {}
+    }
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "parcel watch public/*.html",
+    "build": "parcel build public/*.html"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
