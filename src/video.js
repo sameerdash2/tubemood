@@ -300,7 +300,7 @@ class Video {
             }
 
             // Broadcast load status to clients to display percentage
-            this._io.to('video-' + this._id).emit("loadStatus", this._indexedComments);
+            this._io.to('video-' + this._id).emit("loadStatus", this._newCommentThreads);
 
             // Sometimes, the API returns an empty page of comments and gives no nextPageToken.
             // Retry this request 3 times. If nothing changes, assume it's really the end of comments.

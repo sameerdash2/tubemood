@@ -7,7 +7,9 @@ import json
 sentiment_pipeline = pipeline("sentiment-analysis",
                               model="cardiffnlp/twitter-roberta-base-sentiment-latest",
                               tokenizer="cardiffnlp/twitter-roberta-base-sentiment-latest",
-                              device=0)
+                              device=0,
+                              max_length=512,
+                              truncation=True)
 
 # Read comments file written by Node process
 with open('comments.txt', 'r', encoding='utf-8') as file:

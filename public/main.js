@@ -228,6 +228,12 @@ document.addEventListener("DOMContentLoaded", () => {
         displayNote(`Running sentiment analysis on ${count} comments. Please allow up to 30 seconds...`);
     });
 
+    // Comments all fetched, but sentiment analysis is now running.
+    socket.on("failedSentiment", () => {
+        displayNote(`Sentiment analysis failed due to unknown error.`);
+        document.getElementById("progressIndeterminate").style.display = "none";
+    });
+
     socket.on("groupComments", ({ reset, items, showMore, subCount, totalCount, fullStatsData }) => {
         message.textContent = "\u00A0";
         if (!firstBatchReceived) {
@@ -263,7 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("sortLoaded").style.display = "block";
             document.getElementById("filter").style.display = "block";
             document.getElementById("statsColumn").style.display = statsAvailable ? "block" : "none";
-            document.title = "YouTube Comment Viewer";
 
             // If statistics data was sent, display graph and statistics.
             if (fullStatsData != null) {

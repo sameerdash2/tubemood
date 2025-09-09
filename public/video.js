@@ -20,7 +20,8 @@ export class Video {
     }
 
     display(video) {
-        this._totalExpected = Number(video.statistics.commentCount); // for load percentage
+        const commentThreadsGuess = Math.floor(Number(video.statistics.commentCount) * 0.8);
+        this._totalExpected = Math.min(commentThreadsGuess, 1000); // for load percentage
         this._videoId = video.id;
         this.videoPublished = video.snippet.publishedAt; // for graph bound
         this._uploaderId = video.snippet.channelId; // for highlighting OP comments
@@ -54,12 +55,8 @@ export class Video {
         document.getElementById("progressGreen").ariaValueNow = percentage;
 
         document.getElementById("loadPercentage").textContent = percentage;
-        document.title = percentage + " complete | YouTube Comment Viewer";
-        if (this._totalExpected > 1000) {
-            document.getElementById("loadEta").textContent = `~${parseDurationMSS(eta(this._totalExpected - count))} remaining`;
-            const countString = Number(count).toLocaleString() + " / " + Number(this._totalExpected).toLocaleString();
-            document.getElementById("loadCount").textContent = `(${countString} comments indexed)`;
-        }
+        const countString = Number(count).toLocaleString() + " / " + Number(this._totalExpected).toLocaleString();
+        document.getElementById("loadCount").textContent = `(${countString} comments indexed)`;
     }
 
     handleGroupComments(reset, items) {
