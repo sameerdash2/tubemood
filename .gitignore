@@ -7,6 +7,7 @@ config.json
 *.sqlite-shm
 *.sqlite-wal
 *.log
-*.txt
+debug.txt
+comments.txt
 proportions.json
 sentiment.json
