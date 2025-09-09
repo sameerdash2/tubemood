@@ -1,6 +1,7 @@
 const sqlite = require('better-sqlite3');
 const logger = require('./logger');
 const { printTimestamp, getNextUTCTimestamp, getLastPacificMidnight } = require('./utils');
+const fs = require('fs');
 
 const DAY = 24 * 60 * 60 * 1000;
 const timer = ms => new Promise(res => setTimeout(res, ms));
@@ -24,7 +25,8 @@ class Database {
             ' commentCount INT, retrievedAt BIGINT, lastUpdated BIGINT, inProgress BOOL, nextPageToken TEXT)').run();
         this._db.prepare('CREATE TABLE IF NOT EXISTS comments(id TINYTEXT PRIMARY KEY, textDisplay TEXT, authorDisplayName TEXT,' +
             ' authorProfileImageUrl TINYTEXT, authorChannelId TINYTEXT, likeCount INT, publishedAt BIGINT, updatedAt BIGINT,' +
-            ' totalReplyCount SMALLINT, videoId TINYTEXT, FOREIGN KEY(videoId) REFERENCES videos(id) ON DELETE CASCADE)').run();
+            ' totalReplyCount SMALLINT, videoId TINYTEXT, sentimentLabel TINYTEXT, sentimentScore REAL,' +
+            ' FOREIGN KEY(videoId) REFERENCES videos(id) ON DELETE CASCADE)').run();
 
         this._db.prepare('CREATE INDEX IF NOT EXISTS comment_index ON comments(videoId, publishedAt, likeCount)').run();
 
@@ -145,12 +147,12 @@ class Database {
         for (let i = 0; i < comments.length; i++) { 
             insert.push(comments[i].id, comments[i].textDisplay, comments[i].authorDisplayName,
                 comments[i].authorProfileImageUrl, comments[i].authorChannelId, comments[i].likeCount,
-                comments[i].publishedAt, comments[i].updatedAt, comments[i].totalReplyCount, videoId);
+                comments[i].publishedAt, comments[i].updatedAt, comments[i].totalReplyCount, 'neutral', 0, videoId);
         }
-        const placeholders = comments.map(() => `(?,?,?,?,?,?,?,?,?,?)`).join(',');
+        const placeholders = comments.map(() => `(?,?,?,?,?,?,?,?,?,?,?,?)`).join(',');
 
         const statement = this._db.prepare(`INSERT OR REPLACE INTO comments(id, textDisplay, authorDisplayName, authorProfileImageUrl,` +
-            ` authorChannelId, likeCount, publishedAt, updatedAt, totalReplyCount, videoId) VALUES ${placeholders}`);
+            ` authorChannelId, likeCount, publishedAt, updatedAt, totalReplyCount, sentimentLabel, sentimentScore, videoId) VALUES ${placeholders}`);
         statement.run(insert);
 
         this._db.prepare('UPDATE videos SET commentCount = ?, lastUpdated = ?, nextPageToken = ? WHERE id = ?')
@@ -236,6 +238,48 @@ class Database {
             commentCount.toLocaleString(), rows.length, deleteCountSet.toLocaleString());
 
         return deleteCountSet;
+    }
+
+    dumpComments(id) {
+        const rows = this._db.prepare('SELECT textDisplay FROM comments WHERE videoId = ? ORDER BY publishedAt ASC').all(id);
+        // Write comment texts to file, one per line
+        // Strip carriage returns (occurs rarely)
+        const textDisplays = rows.map(row => row.textDisplay.replace(/[\r\n]/g, '')).join('\n').trim();
+
+        fs.writeFileSync('comments.txt', textDisplays, 'utf8');
+    }
+
+    importSentiments(id) {
+        const analyses = JSON.parse(fs.readFileSync('sentiment.json', 'utf8'));
+
+        // Must write analyses back into comments table in order of publishedAt.
+
+        // Fetch row ids in order of publishedAt
+        const rows = this._db.prepare(`SELECT id FROM comments WHERE videoId = ? ORDER BY publishedAt ASC`).all(id);
+
+        if (rows.length !== analyses.length) {
+            logger.error(`Video ${id}: ${rows.length} rows in table but ${analyses.length} analyses in sentiment.json.`);
+            return;
+        }
+
+        const updateStmt = this._db.prepare(`
+            UPDATE comments
+            SET sentimentLabel = ?, sentimentScore = ?
+            WHERE id = ?
+        `);
+
+        // Define a transaction to update all comments' sentiments
+        const updateMany = this._db.transaction((triples) => {
+            for (const [id, label, score] of triples) {
+                updateStmt.run(label, score, id);
+            }
+        });
+
+        // Zip sentiments with comment ids
+        const triples = analyses.map((s, i) => [rows[i].id, s.label, s.score]);
+        // Write all sentiments.
+        updateMany(triples);
+        logger.log('info', `Video ${id}: Imported sentiments for ${rows.length} comments.`);
     }
 }
 

@@ -86,13 +86,10 @@ export function formatComment(item, number, options, uploaderId, videoId, reply 
         contentClass = options.showImg ? "commentContent" : "commentContentFull";
     }
     const channelUrl = getChannelUrl(item.authorChannelId);
-    let replySegment = "";
     let likeSegment = "";
-    let numSegment = "";
     let opSegment = "";
     let pfpSegment = "";
 
-    const totalReplyCount = Number(item.totalReplyCount);
     const likeCount = Number(item.likeCount);
 
     let timeString = parseTimestamp(item.publishedAt, options.timezone);
@@ -100,30 +97,9 @@ export function formatComment(item, number, options, uploaderId, videoId, reply 
         timeString += ` ( <span class="icon-pencil"></span> edited ${parseTimestamp(item.updatedAt, options.timezone)})`;
     }
 
-    // second condition included for safety
-    if (item.totalReplyCount > 0 && !reply) {
-        replySegment = `
-            <div id="replies-${item.id}" class="commentRepliesDiv">
-                <div class="repliesExpanderCollapsed">
-                    <button id="getReplies-${item.id}" class="showHideButton btn btn-link font-weight-bold p-0" type="button">
-                        &#x25BC; Load ${totalReplyCount.toLocaleString()} replies
-                    </button>
-                </div>
-                <div id="repliesEE-${item.id}" class="repliesExpanderExpanded"></div>
-            </div>
-        `;
-    }
-
     likeSegment += (item.likeCount)
         ? `<div class="commentFooter"><span class="icon-thumbs-up"></span> ${likeCount.toLocaleString()}</div>`
         : `<div class="commentFooter"></div>`;
-
-    if (number > 0) {
-        numSegment +=
-            `<span class="num">
-                <a href="https://www.youtube.com/watch?v=${videoId}&lc=${item.id}" class="noColor">#${number}</a>
-            </span>`;
-    }
 
     let authorClass = "authorName";
     if (item.authorChannelId === uploaderId) {
@@ -147,11 +123,22 @@ export function formatComment(item, number, options, uploaderId, videoId, reply 
                 <span class="timeStamp">
                     <a href="https://www.youtube.com/watch?v=${videoId}&lc=${item.id}" class="noColor">${timeString}</a>
                 </span>
-                ${numSegment}
             </div>
             <div class="commentText" dir="auto">${item.snippet || item.textDisplay}</div>
-            ${likeSegment}${replySegment}
+            ${likeSegment}
         </div>`;
+
+    // Sentiment score
+    const colors = {
+        'positive': 'green',
+        'negative': '#c00',
+        'neutral': '#4d4d4d'
+    }
+    const casedLabel = item.sentimentLabel.charAt(0).toUpperCase() + item.sentimentLabel.slice(1);
+    content +=
+        `<div class="sentiment">${casedLabel}:
+            <span style="color: ${colors[item.sentimentLabel]}">${(item.sentimentScore * 100).toFixed(0)}%</span>
+        </div>`
 
     return content;
 }

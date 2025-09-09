@@ -2,6 +2,7 @@ const config = require('../config.json');
 const { convertComment, printTimestamp } = require('./utils');
 const logger = require('./logger');
 const fs = require('fs');
+const spawn = require("child_process").spawn;
 
 const MAX_CONSECUTIVE_ERRORS = 3;
 
@@ -69,9 +70,8 @@ class Video {
             this._commentsEnabled = true;
             // for upcoming/live streams, disregard a 0 count.
             if (!(this._video.snippet.liveBroadcastContent !== "none" && this._commentCount === 0)) {
-                // Make graph available if 1 hour has passed, to ensure at least 2 points on the graph
-                this._graphAvailable = this._commentCount >= 10
-                    && new Date(this._video.snippet.publishedAt).getTime() <= (Date.now() - 60 * 60 * 1000);
+                // Make stats available if there is at least one comment.
+                this._graphAvailable = this._commentCount >= 1;
 
                 const videoInDb = typeof this._app.database.checkVideo(this._id).row !== "undefined";
 
@@ -317,8 +317,8 @@ class Video {
             }
 
             // If there are more comments, and database-stored comments have not been reached, retrieve the next 100 comments
-            // And for Tubemood: stop at 2000 comments.
-            if (response.data.nextPageToken !== undefined && proceed && this._newCommentThreads < 2000) {
+            // And for Tubemood: stop at 1000 comments.
+            if (response.data.nextPageToken !== undefined && proceed && this._newCommentThreads < 1000) {
                 setTimeout(() => this.fetchAllComments(response.data.nextPageToken, appending), 0);
             }
             else {
@@ -332,9 +332,33 @@ class Video {
                     this._newComments, this._newCommentThreads, appending);
 
                 this._loadComplete = true; // To permit statistics retrieval later
+                this._socket.emit("loadComplete", this._newCommentThreads);
 
-                // Send the first batch of comments
-                this.requestLoadedComments("dateOldest", 0, config.defaultPageSize, true, undefined, undefined, true);
+                // Begin sentiment analysis on all comments
+
+                // Dump comments to comments.txt
+                this._app.database.dumpComments(this._id);
+
+                // Run Python subprocess to conduct sentiment analysis on comments
+                const sa_start = new Date();
+                logger.log('info', "Beginning Sentiment Analysis on video %s.", this._id);
+                const pythonProcess = spawn('python3', ["src/driver.py"]);
+                pythonProcess.on('exit', (code) => {
+                    if (code !== 0) {
+                        logger.log('error', "Sentiment Analysis FAILED for video %s with exit code %d.", this._id, code);
+                        this._socket.emit("failedSentiment");
+                    } else {
+                        const sa_end = new Date();
+                        logger.log('info', "Sentiment Analysis complete for video %s in %ds.",
+                            this._id, ((sa_end - sa_start) / 1000).toFixed(1));
+
+                        // Read back individual sentiment results from sentiment.json into comments table
+                        this._app.database.importSentiments(this._id);
+
+                        // Send the first batch of comments
+                        this.requestLoadedComments("dateOldest", 0, config.defaultPageSize, true, undefined, undefined, true);
+                    }
+                });
             }
         }, (err) => {
             const error = err.errors[0];
@@ -458,7 +482,9 @@ class Video {
                     likeCount: commentThread.likeCount,
                     publishedAt: commentThread.publishedAt,
                     updatedAt: commentThread.updatedAt,
-                    totalReplyCount: commentThread.totalReplyCount
+                    totalReplyCount: commentThread.totalReplyCount,
+                    sentimentLabel: commentThread.sentimentLabel,
+                    sentimentScore: commentThread.sentimentScore
                 });
             }
 
@@ -578,11 +604,7 @@ class Video {
     // Computes statistics for the current video and returns them via Promise.
     getStatistics() {
         return new Promise((resolve) => {
-            // TODO: Sentiment stuff here!!
-            const fullStatsData = {
-                positive: 77,
-                negative: 23
-            };
+            const fullStatsData = JSON.parse(fs.readFileSync('proportions.json', 'utf8'));
             resolve(fullStatsData);
         });
     }

@@ -221,6 +221,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Comments all fetched, but sentiment analysis is now running.
+    socket.on("loadComplete", (count) => {
+        document.getElementById("progressIndeterminate").style.display = "block";
+        document.getElementById("progressGreen").style.display = "none";
+        displayNote(`Running sentiment analysis on ${count} comments. Please allow up to 30 seconds...`);
+    });
+
     socket.on("groupComments", ({ reset, items, showMore, subCount, totalCount, fullStatsData }) => {
         message.textContent = "\u00A0";
         if (!firstBatchReceived) {
@@ -263,6 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 video.handleStatsData(fullStatsData);
                 document.getElementById("statsContainer").style.display = "block";
             }
+            displayNote(`Sentiment analysis complete for ${totalCount} comments.`);
         }
         if (reset) {
             hideLoading();

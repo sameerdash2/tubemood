@@ -219,10 +219,10 @@ div#info {
 .bg-invalid, .bg-invalid:focus {
   background-color: rgba(255,0,0,.10);
 }
-/* #commentsCol, */
+#commentsCol,
 #videoColumn,
-/* #statsColumn, */
-/* #statsContainer, */
+#statsColumn,
+#statsContainer,
 #loadStatus,
 #linkedColumn, 
 #noteColumn,
@@ -241,6 +241,9 @@ div#info {
 }
 #s_neg {
   color: #c00;
+}
+#s_neu {
+  color: #444;
 }
 tr:first-child td,
 tr:first-child th {
@@ -342,8 +345,24 @@ a.channelPfpLink {
 }
 .sentiment {
   display: inline-block;
-  width: 108px;
+  width: 118px;
   vertical-align: top;
+  float: right;
+  font-weight: bold;
+}
+#progressIndeterminate {
+  position: relative;
+  width: 25%;
+  animation: movingGreen 1.5s cubic-bezier(0.4, 0.6, 0.6, 0.4) infinite;
+  display: none;
+}
+@keyframes movingGreen {
+  from {
+    left: -25%;
+  }
+  to {
+    left: 100%;
+  }
 }
 .commentContentFull {
   width: 100%;

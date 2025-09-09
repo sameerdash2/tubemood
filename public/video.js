@@ -147,20 +147,31 @@ export class Video {
         document.getElementById("linkedColumn").style.display = "block";
     }
 
+    floatToPercentString(val) {
+        if (isNaN(val)) {
+            return `--`;
+        } else {
+            return (val * 100).toFixed(1) + '%';
+        }
+    }
+
     handleStatsData(data) {
-        document.getElementById("s_pos").textContent = `${data.positive}%`;
-        document.getElementById("s_neg").textContent = `${data.negative}%`;
+        document.getElementById("s_pos").textContent = this.floatToPercentString(data.positive);
+        document.getElementById("s_neg").textContent = this.floatToPercentString(data.negative);
+        document.getElementById("s_neu").textContent = this.floatToPercentString(data.neutral);
 
         const chartData = {
             labels: [
                 'Positive',
+                'Neutral',
                 'Negative'
             ],
             datasets: [{
                 label: 'Score',
-                data: [data.positive, data.negative],
+                data: [data.positive, data.neutral, data.negative],
                 backgroundColor: [
-                    'rgba(108, 250, 108, 1)',
+                    'rgb(108, 250, 108)',
+                    '#ddd',
                     'rgb(255, 99, 132)'
                 ],
                 hoverOffset: 4
