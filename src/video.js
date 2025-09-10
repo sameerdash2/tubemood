@@ -343,6 +343,9 @@ class Video {
                 const sa_start = new Date();
                 logger.log('info', "Beginning Sentiment Analysis on video %s.", this._id);
                 const pythonProcess = spawn('python3', ["src/driver.py"]);
+                pythonProcess.on('stderr', (data) => {
+                    logger.log('error', "Sentiment Analysis error on video %s: %s", this._id, data.toString());
+                });
                 pythonProcess.on('exit', (code) => {
                     if (code !== 0) {
                         logger.log('error', "Sentiment Analysis FAILED for video %s with exit code %d.", this._id, code);
