@@ -1,5 +1,5 @@
 import { formatTitle, formatComment, eta, parseDurationMSS } from './util.js';
-import { Chart } from "chart.js/auto";
+import Chart from "chart.js/auto";
 
 export class Video {
     constructor(socket) {
