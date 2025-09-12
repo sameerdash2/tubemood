@@ -343,7 +343,7 @@ class Video {
                 // Call Python subprocess to conduct sentiment analysis on comments
                 const sa_start = new Date();
                 logger.log('info', "Beginning Sentiment Analysis on video %s.", this._id);
-                fetch('http://localhost:5001/analyze',{
+                fetch('http://localhost:6001/analyze',{
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: commentsDump
