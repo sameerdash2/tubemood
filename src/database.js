@@ -242,16 +242,13 @@ class Database {
 
     dumpComments(id) {
         const rows = this._db.prepare('SELECT textDisplay FROM comments WHERE videoId = ? ORDER BY publishedAt ASC').all(id);
-        // Write comment texts to file, one per line
+        // Write comment texts to string, one per line
         // Strip carriage returns (occurs rarely)
         const textDisplays = rows.map(row => row.textDisplay.replace(/[\r\n]/g, '')).join('\n').trim();
-
-        fs.writeFileSync('comments.txt', textDisplays, 'utf8');
+        return textDisplays;
     }
 
-    importSentiments(id) {
-        const analyses = JSON.parse(fs.readFileSync('sentiment.json', 'utf8'));
-
+    importSentiments(id, analyses) {
         // Must write analyses back into comments table in order of publishedAt.
 
         // Fetch row ids in order of publishedAt

@@ -1,8 +1,9 @@
 const config = require('../config.json');
 const { convertComment, printTimestamp } = require('./utils');
 const logger = require('./logger');
-const fs = require('fs');
 const spawn = require("child_process").spawn;
+
+const pythonProcess = spawn('python3', ["src/driver.py"]);
 
 const MAX_CONSECUTIVE_ERRORS = 3;
 
@@ -336,31 +337,34 @@ class Video {
 
                 // Begin sentiment analysis on all comments
 
-                // Dump comments to comments.txt
-                this._app.database.dumpComments(this._id);
+                // Retrieve a dump of comments separated by newlines
+                const commentsDump = this._app.database.dumpComments(this._id);
 
-                // Run Python subprocess to conduct sentiment analysis on comments
+                // Call Python subprocess to conduct sentiment analysis on comments
                 const sa_start = new Date();
                 logger.log('info', "Beginning Sentiment Analysis on video %s.", this._id);
-                const pythonProcess = spawn('python3', ["src/driver.py"]);
-                pythonProcess.on('stderr', (data) => {
-                    logger.log('error', "Sentiment Analysis error on video %s: %s", this._id, data.toString());
-                });
-                pythonProcess.on('exit', (code) => {
-                    if (code !== 0) {
-                        logger.log('error', "Sentiment Analysis FAILED for video %s with exit code %d.", this._id, code);
-                        this._socket.emit("failedSentiment");
-                    } else {
-                        const sa_end = new Date();
-                        logger.log('info', "Sentiment Analysis complete for video %s in %ds.",
-                            this._id, ((sa_end - sa_start) / 1000).toFixed(1));
-
-                        // Read back individual sentiment results from sentiment.json into comments table
-                        this._app.database.importSentiments(this._id);
-
-                        // Send the first batch of comments
-                        this.requestLoadedComments("dateOldest", 0, config.defaultPageSize, true, undefined, undefined, true);
+                fetch('http://localhost:5001/analyze',{
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: commentsDump
+                }).then(res => {
+                    if (!res.ok) {
+                        logger.log('error', "Sentiment Analysis error on video %s: %s", this._id, res.statusText);
                     }
+                    return res.json();
+                }).then(data => {
+                    const sa_end = new Date();
+                    logger.log('info', "Sentiment Analysis complete for video %s in %ds.",
+                        this._id, ((sa_end - sa_start) / 1000).toFixed(1));
+
+                    // Process sentiment analysis results
+                    this._app.database.importSentiments(this._id, data.analyses);
+
+                    // Store overall proportions
+                    this._proportions = data.proportions;
+
+                    // Send the first batch of comments
+                    this.requestLoadedComments("dateOldest", 0, config.defaultPageSize, true, undefined, undefined, true);
                 });
             }
         }, (err) => {
@@ -607,7 +611,7 @@ class Video {
     // Computes statistics for the current video and returns them via Promise.
     getStatistics() {
         return new Promise((resolve) => {
-            const fullStatsData = JSON.parse(fs.readFileSync('proportions.json', 'utf8'));
+            const fullStatsData = this._proportions;
             resolve(fullStatsData);
         });
     }

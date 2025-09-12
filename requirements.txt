@@ -2,3 +2,4 @@ transformers==4.56.0
 beautifulsoup4==4.11.1
 torch==2.8.0
 lxml==4.9.4
+flask==2.2.2
